@@ -9,6 +9,8 @@ packages = [{include = "job_queue_lambda"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+pydantic = "^2.10.5"
+fire = "^0.7.0"
 
 
 [build-system]
