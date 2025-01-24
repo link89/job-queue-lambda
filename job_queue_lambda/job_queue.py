@@ -34,27 +34,26 @@ class Slurm(JobQueue):
         return job_id
 
     async def get_job_info(self, job_id: str):
+        # query jobs
         cmd = f'{self.config.squeue} -o "%i|%t|%r|%N" -j {job_id}'
         result = await self.connector.run(cmd)
         if result.return_code != 0:
             if 'Invalid job id specified' in result.stderr:
                 return None
-            logger.error(f"Failed to get job info: {result.stderr}")
+            logger.error(f"Unexpected squeue error: {result.stderr}")
             return {'id': job_id, 'nodes': []}
-        job = parse_csv(result.stdout, delimiter="|")[0]
+        # query nodes
         nodes = []
+        job = parse_csv(result.stdout, delimiter="|")[0]
         state = job.get('ST', '').strip()
         if state == 'R':
-            nodes = job.get('NODELIST', '').strip()
-            result = await self.connector.run(f'{self.config.scontrol} show hostname {nodes}')
+            nodelist = job.get('NODELIST', '').strip()
+            result = await self.connector.run(f'{self.config.scontrol} show hostname {nodelist}')
             if result.return_code == 0:
                 nodes = result.stdout.strip().splitlines()
             else:
                 logger.error(f"Failed to parse nodelist: {result.stderr}")
-        return {
-            'id': job_id,
-            'nodes': nodes,
-        }
+        return { 'id': job_id, 'nodes': nodes, }
 
     def _parse_job_id(self, stdout: str):
         m = re.search(r'\d+', stdout)
