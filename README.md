@@ -19,7 +19,7 @@ clusters:
     job_queue:
       slurm: {}
     
-    lambda:
+    lambdas:
       - name: ollama
         forward_to: "http://{NODE_NAME}:11434"
         max_workers: 1
