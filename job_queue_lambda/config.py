@@ -20,6 +20,7 @@ class SlurmConfig(BaseModel):
     sbatch: str = "sbatch"
     squeue: str = "squeue"
     scancel: str = "scancel"
+    scontrol: str = "scontrol"
 
 
 class JobQueueConfig(BaseModel):

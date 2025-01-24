@@ -6,15 +6,19 @@ import asyncssh
 from asyncssh import SSHClientConnection
 
 import asyncio
+from logging import getLogger
 
 from .config import SshConfig
 
 
-def ensure_str(byte_or_str: Union[bytes, str, None]) -> str:
+logger = getLogger(__name__)
+
+
+def ensure_str(byte_or_str: Union[bytes, str, None], encoding='utf-8') -> str:
     if byte_or_str is None:
         return ""
     if isinstance(byte_or_str, bytes):
-        return byte_or_str.decode()
+        return byte_or_str.decode(encoding=encoding)
     return byte_or_str  # type: ignore
 
 
@@ -40,8 +44,16 @@ class SshConnector(Connector):
         self._connect: Optional[SSHClientConnection] = None
 
     async def connect(self):
-        # TODO: auto reconnect
         # TODO: socks proxy
+
+        # test if connection is still alive
+        if self._connect is not None:
+            try:
+                await self._connect.run("echo hello")
+            except Exception:
+                logger.exception("SSH connection failed")
+                self._connect = None
+
         if self._connect is None:
             self._connect = await asyncssh.connect(
                 self.config.host,
@@ -68,10 +80,12 @@ class LocalConnector(Connector):
         return None
 
     async def run(self, cmd: str):
-        result = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        result = await asyncio.create_subprocess_shell(
+            cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         stdout, stderr = await result.communicate()
         return CmdResult(
             stdout=ensure_str(stdout),
             stderr=ensure_str(stderr),
             return_code=result.returncode
         )
+
