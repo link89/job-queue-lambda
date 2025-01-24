@@ -1,13 +1,13 @@
-from typing import List, Dict, Optional, Union
+from typing import Optional, Union
+
+from dataclasses import dataclass
 
 import asyncssh
 from asyncssh import SSHClientConnection
 
-from dataclasses import dataclass
 import asyncio
-import os
 
-from .config import ClusterConfig, SshConfig
+from .config import SshConfig
 
 
 def ensure_str(byte_or_str: Union[bytes, str, None]) -> str:
@@ -75,32 +75,3 @@ class LocalConnector(Connector):
             stderr=ensure_str(stderr),
             return_code=result.returncode
         )
-
-
-class Cluster:
-
-    def __init__(self, config: ClusterConfig):
-        self.config = config
-        if config.ssh:
-            self.connector = SshConnector(config.ssh)
-        else:
-            self.connector = LocalConnector()
-
-
-    def start(self):
-        ...
-
-
-
-class ClusterManager:
-
-    def __init__(self, clusters : List[ClusterConfig]):
-        self.clusters: Dict[str, Cluster] = {}
-        for config in clusters:
-            if config.name in self.clusters:
-                raise ValueError(f"Duplicate cluster name: {config.name}")
-            self.clusters[config.name] = Cluster(config)
-
-    def start(self):
-        ...
-

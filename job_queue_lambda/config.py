@@ -30,7 +30,7 @@ class ClusterConfig(BaseModel):
     name: str
     lambdas: List[LambdaConfig]
     ssh: Optional[SshConfig] = None
-    job_queue: Optional[JobQueueConfig] = None
+    job_queue: JobQueueConfig
 
 
 class Config(BaseModel):
