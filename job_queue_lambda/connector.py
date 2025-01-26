@@ -3,7 +3,7 @@ from typing import Optional, Union
 from dataclasses import dataclass
 
 import asyncssh
-from asyncssh import SSHClientConnection
+from asyncssh import SSHClientConnection, SSHListener
 
 import asyncio
 from logging import getLogger
@@ -42,28 +42,37 @@ class SshConnector(Connector):
     def __init__(self, config: SshConfig):
         self.config = config
         self._connect: Optional[SSHClientConnection] = None
+        self._ssh_listener: Optional[SSHListener] = None
+
+    def close(self):
+        try:
+            self._ssh_listener.close()  # type: ignore
+            self._connect.close() # type: ignore
+            self._ssh_listener = None
+            self._connect = None
+        except Exception:
+            pass
 
     async def connect(self):
-        # TODO: socks proxy
-
-        # test if connection is still alive
         if self._connect is not None:
             try:
+                # test connection
                 await self._connect.run("echo hello")
             except Exception:
                 logger.exception("SSH connection failed")
-                self._connect = None
-
+                self.close()
         if self._connect is None:
             self._connect = await asyncssh.connect(
                 self.config.host,
                 port=self.config.port,
                 config=self.config.config_file,
             )
+            self._ssh_listener = await self._connect.forward_socks(
+                '127.0.0.1', self.config.socks_port)
         return self._connect
 
     def get_socks_proxy(self):
-        ...
+        return f"socks5h://127.0.0.1:{self.config.socks_port}"
 
     async def run(self, cmd: str):
         conn = await self.connect()
