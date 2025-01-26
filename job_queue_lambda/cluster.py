@@ -1,6 +1,9 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from logging import getLogger
 
+from aiohttp import web
+from aiohttp_socks import ProxyConnector
+import re
 
 from .connector import SshConnector, LocalConnector, Connector
 from .config import ClusterConfig, LambdaConfig
@@ -16,6 +19,8 @@ class Cluster:
         if state is None:
             state = {}
         self._state = state
+
+        self._proxy_connector: Optional[ProxyConnector] = None
 
         self.config = config
         if config.ssh:
@@ -54,7 +59,7 @@ class Cluster:
                 new_jobs.append(job)
 
         if not new_jobs:
-            # no job running, submit a new one
+            # no job is running, submit a new one
             # TODO: support multiple job
             job_id = await self.job_queue.new_job(lambda_config.script)
             job_info = await self.job_queue.get_job_info(job_id)
@@ -64,13 +69,25 @@ class Cluster:
                 logger.error(f"Failed to submit job: {job_id}")
         self._state[name]["jobs"] = new_jobs
 
-    async def forward(self, lambda_name: str, req):
+    def get_socks_proxy(self):
+        if self._proxy_connector is None:
+            socks_url = self.connector.get_socks_proxy()
+            if socks_url is None:
+                return None
+            self._proxy_connector = ProxyConnector.from_url(socks_url)
+        return self._proxy_connector
+
+    async def forward(self, lambda_name: str, req: web.Request, target_url: str):
         lambda_state = self._state.get(lambda_name)
         if lambda_state is None:
             raise ValueError(f"Lambda not found: {lambda_name}")
         if not lambda_state["jobs"]:
             raise ValueError(f"No job running for lambda: {lambda_name}")
         job = lambda_state["jobs"][0]
+        nodes = job["nodes"]
+        if not nodes:
+            raise ValueError(f"No node found for job: {job['id']}")
+        node = nodes[0]  # TODO: load balance by request count
         # TODO: use aiohttp to forward request, take care of socks proxy
 
 
@@ -86,8 +103,8 @@ class ClusterManager:
         for cluster in self.clusters.values():
             await cluster.poll()
 
-    async def forward(self, cluster_name: str, lambda_name: str, req):
+    async def forward(self, cluster_name: str, lambda_name: str, req: web.Request, target_url: str):
         cluster = self.clusters.get(cluster_name)
         if cluster is None:
             raise ValueError(f"Cluster not found: {cluster_name}")
-        return await cluster.forward(lambda_name, req)
+        return await cluster.forward(lambda_name, req, target_url)

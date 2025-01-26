@@ -8,7 +8,7 @@ class SshConfig(BaseModel):
     port: int = 22
     config_file: str = os.path.expanduser("~/.ssh/config")
     socks_port: int
-
+    tmp_dir: str = "./tmp"
 
 class LambdaConfig(BaseModel):
     name: str
@@ -35,7 +35,8 @@ class ClusterConfig(BaseModel):
 
 
 class Config(BaseModel):
-    listen: str = "127.0.0.1:9000"
+    host: str = "127.0.0.1"
+    port: int = 9000
+    base_url: str = "/"
     state_file : str = "./state.json"
     clusters: List[ClusterConfig]
-

@@ -69,6 +69,7 @@ class SshConnector(Connector):
             )
             self._ssh_listener = await self._connect.forward_socks(
                 '127.0.0.1', self.config.socks_port)
+            await self.run(f"mkdir -p {self.config.tmp_dir}")
         return self._connect
 
     def get_socks_proxy(self):
