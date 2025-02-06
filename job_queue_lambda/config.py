@@ -8,12 +8,13 @@ class SshConfig(BaseModel):
     port: int = 22
     config_file: str = os.path.expanduser("~/.ssh/config")
     socks_port: int
-    tmp_dir: str = "./tmp"
+
 
 class LambdaConfig(BaseModel):
     name: str
     forward_to: str
-    script: str
+    script_path: str
+    script: Optional[str] = None
 
 
 class SlurmConfig(BaseModel):
@@ -32,6 +33,7 @@ class ClusterConfig(BaseModel):
     lambdas: List[LambdaConfig]
     ssh: Optional[SshConfig] = None
     job_queue: JobQueueConfig
+    tmp_dir: str = "./tmp-jql"
 
 
 class Config(BaseModel):

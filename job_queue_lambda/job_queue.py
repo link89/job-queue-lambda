@@ -9,7 +9,7 @@ from .connector import Connector
 logger = getLogger(__name__)
 
 class JobQueue:
-    async def new_job(self, script: str) -> str:
+    async def new_job(self, script_path: str, script: Optional[str]=None) -> str:
         raise NotImplementedError()
 
     async def get_job_info(self, job_id: str) -> Optional[dict]:
@@ -22,9 +22,12 @@ class Slurm(JobQueue):
         self.config = config
         self.connector = connector
 
-    async def new_job(self, script: str):
-        # FIXME: create a script file and submit it
-        cmd = f"{self.config.sbatch} {script}"
+    async def new_job(self, script_path: str, script: Optional[str]=None) -> str:
+        if script is not None:
+            logger.info(f"Creating script file: {script_path}")
+            await self.connector.dump_text(script, script_path)
+        # TODO: handle cwd properly or else the log file of slurm job will be a mess
+        cmd = f"{self.config.sbatch} {script_path}"
         result = await self.connector.run(cmd)
         if result.return_code != 0:
             raise ValueError(f"Failed to submit job: {result.stderr}")

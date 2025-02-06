@@ -60,8 +60,8 @@ class Cluster:
 
         if not new_jobs:
             # no job is running, submit a new one
-            # TODO: support multiple job
-            job_id = await self.job_queue.new_job(lambda_config.script)
+            # TODO: support max_jobs option in the future
+            job_id = await self.job_queue.new_job(lambda_config.script_path, lambda_config.script)
             job_info = await self.job_queue.get_job_info(job_id)
             if job_info is not None:
                 new_jobs.append(job_info)

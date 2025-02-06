@@ -45,13 +45,13 @@ class SshConnector(Connector):
     def __init__(self, config: SshConfig):
         self.config = config
         self._connect: Optional[SSHClientConnection] = None
-        self._ssh_listener: Optional[SSHListener] = None
+        self._socks_listener: Optional[SSHListener] = None
 
     def close(self):
         try:
-            self._ssh_listener.close()  # type: ignore
+            self._socks_listener.close()  # type: ignore
             self._connect.close() # type: ignore
-            self._ssh_listener = None
+            self._socks_listener = None
             self._connect = None
         except Exception:
             pass
@@ -70,9 +70,8 @@ class SshConnector(Connector):
                 port=self.config.port,
                 config=self.config.config_file,
             )
-            self._ssh_listener = await self._connect.forward_socks(
+            self._socks_listener = await self._connect.forward_socks(
                 '127.0.0.1', self.config.socks_port)
-            await self.run(f"mkdir -p {self.config.tmp_dir}")
         return self._connect
 
     def get_socks_proxy(self):
