@@ -78,7 +78,8 @@ class Cluster:
         return self._proxy_connector
 
     async def forward(self, lambda_name: str, req: web.Request, target_url: str):
-        lambda_state = self._state.get(lambda_name)
+        lambda_state  = self._state.get(lambda_name)
+        lambda_config = self.lambdas.get(lambda_name)
         if lambda_state is None:
             raise ValueError(f"Lambda not found: {lambda_name}")
         if not lambda_state["jobs"]:

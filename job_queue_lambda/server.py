@@ -14,12 +14,14 @@ def make_http_server(cluster_manager: ClusterManager, base_url: str):
         base_url = base_url + '/'
 
     async def handle_request(request: web.Request) -> web.Response:
-        print(request)
         cluster_name = request.match_info['cluster_name']
-        lambda_name = request.match_info['lambda_name']
+        lambda_name  = request.match_info['lambda_name']
+        target_url = request.match_info.get('tail', '') + '?' + request.query_string
+
+        res = await cluster_manager.forward(cluster_name, lambda_name, request, target_url=target_url)
         return web.Response(text=f"Hello, {cluster_name}! You called {lambda_name}.")
 
-        # res = await cluster_manager.forward(cluster_name, lambda_name, request, target_url=request.path)
+
 
         # # Prepare headers, excluding 'Host' to avoid conflicts
         # headers = dict(request.headers)
@@ -55,9 +57,10 @@ def make_http_server(cluster_manager: ClusterManager, base_url: str):
 
     # Set up the aiohttp application with a catch-all route
     app = web.Application()
-    # the route should be /{base_url}/clusters/{cluster_name}/lambdas/{lambda_name}/.*
-    forward_url = base_url + 'clusters/{cluster_name}/lambdas/{lambda_name}/.*'
+    forward_url = base_url + 'clusters/{cluster_name}/lambdas/{lambda_name}'
     app.add_routes([
         web.route('*', forward_url, handle_request),
+        web.route('*', forward_url + '/{tail:.*}', handle_request)
+
     ])
     return app

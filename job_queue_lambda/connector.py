@@ -36,6 +36,9 @@ class Connector:
     async def run(self, cmd: str) -> CmdResult:
         raise NotImplementedError()
 
+    async def dump_text(self, text: str, path: str):
+        raise NotImplementedError()
+
 
 class SshConnector(Connector):
 
@@ -84,6 +87,13 @@ class SshConnector(Connector):
             return_code=result.exit_status
         )
 
+    async def dump_text(self, text: str, path: str):
+        conn = await self.connect()
+        async with conn.start_sftp_client() as sftp:
+            async with sftp.open(path, 'w') as f:
+                await f.write(text)
+        return path
+
 class LocalConnector(Connector):
 
     def get_socks_proxy(self):
@@ -99,3 +109,7 @@ class LocalConnector(Connector):
             return_code=result.returncode
         )
 
+    async def dump_text(self, text: str, path: str):
+        with open(path, 'w') as f:
+            f.write(text)
+        return path
