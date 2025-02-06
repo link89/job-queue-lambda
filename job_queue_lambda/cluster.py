@@ -3,7 +3,7 @@ from logging import getLogger
 
 from aiohttp import web
 from aiohttp_socks import ProxyConnector
-import re
+import aiohttp
 
 from .connector import SshConnector, LocalConnector, Connector
 from .config import ClusterConfig, LambdaConfig
@@ -80,17 +80,42 @@ class Cluster:
     async def forward(self, lambda_name: str, req: web.Request, target_url: str):
         lambda_state  = self._state.get(lambda_name)
         lambda_config = self.lambdas.get(lambda_name)
-        if lambda_state is None:
+        if lambda_state is None or lambda_config is None:
             raise ValueError(f"Lambda not found: {lambda_name}")
         if not lambda_state["jobs"]:
             raise ValueError(f"No job running for lambda: {lambda_name}")
+        # TODO: load balance by request count if multiple jobs are supported
         job = lambda_state["jobs"][0]
         nodes = job["nodes"]
         if not nodes:
             raise ValueError(f"No node found for job: {job['id']}")
-        node = nodes[0]  # TODO: load balance by request count
-        # TODO: use aiohttp to forward request, take care of socks proxy
+        # TODO: load balance by request count
+        node = nodes[0]
 
+        forword_to = lambda_config.forward_to.format(NODE_NAME=node).strip('/')
+        forward_url = forword_to + target_url
+        logger.info(f"Forwarding request to {forward_url}")
+
+        # forward the request to the target server
+        # TODO: use connection pool for better performance
+        proxy_connector = self.get_socks_proxy()
+        headers = dict(req.headers)
+        headers.pop('Host', None)
+        async with aiohttp.ClientSession(connector=proxy_connector) as session:
+            async with session.request(
+                method=req.method,
+                url=forward_url,
+                headers=headers,
+                data=await req.read(),
+                allow_redirects=False,
+                timeout=aiohttp.ClientTimeout(total=60)
+            ) as response:
+                resp_body = await response.read()
+                return web.Response(
+                    body=resp_body,
+                    status=response.status,
+                    headers=response.headers
+                )
 
 class ClusterManager:
     def __init__(self, clusters : List[ClusterConfig]):

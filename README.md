@@ -22,8 +22,8 @@ clusters:
     lambdas:
       - name: ollama
         forward_to: "http://{NODE_NAME}:11434"
-        max_workers: 1
-        submit: |
+        script_path: "./tmp/ollama.slurm"
+        script: |
           #SBATCH --job-name=ollama
           #SBATCH --partition=gpu
 
