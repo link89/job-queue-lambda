@@ -22,8 +22,10 @@ For example, you can use the following configuration:
 # ./examples/config.yaml
 clusters:
   - name: ikkem-hpc
+    # if running on login node, then ssh section is not needed
     ssh:
       host: ikkem-hpc
+      # it use ssh dynamic port forwarding to connect to the cluster, so socks_port is required
       socks_port: 10801
 
     lambdas:
@@ -40,6 +42,7 @@ clusters:
 
     job_queue:
       slurm: {}
+
 ```
 
 And then you can start the server by running:

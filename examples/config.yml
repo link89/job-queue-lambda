@@ -1,7 +1,9 @@
 clusters:
   - name: ikkem-hpc
+    # if running on login node, then ssh section is not needed
     ssh:
       host: ikkem-hpc
+      # it use ssh dynamic port forwarding to connect to the cluster, so socks_port is required
       socks_port: 10801
 
     lambdas:
