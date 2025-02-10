@@ -4,6 +4,7 @@ from logging import getLogger
 from aiohttp import web
 from aiohttp_socks import ProxyConnector
 import aiohttp
+import asyncio
 
 from .connector import SshConnector, LocalConnector, Connector
 from .config import ClusterConfig, LambdaConfig
@@ -40,7 +41,7 @@ class Cluster:
                 raise ValueError(f"Duplicate lambda name: {lambda_config.name}")
             self.lambdas[lambda_config.name] = lambda_config
 
-    async def poll(self):
+    async def _poll_all(self):
         for lambda_config in self.lambdas.values():
             await self._poll_lambda(lambda_config)
 
@@ -92,7 +93,10 @@ class Cluster:
         # TODO: load balance by request count
         node = nodes[0]
 
-        forword_to = lambda_config.forward_to.format(NODE_NAME=node).strip('/')
+        forword_to = lambda_config.forward_to.format(NODE_NAME=node)
+        if not forword_to.endswith('/'):
+            forword_to = forword_to + '/'
+
         forward_url = forword_to + target_url
         logger.info(f"Forwarding request to {forward_url}")
 
@@ -125,9 +129,14 @@ class ClusterManager:
                 raise ValueError(f"Duplicate cluster name: {config.name}")
             self.clusters[config.name] = Cluster(config)
 
-    async def poll(self):
+    async def start(self):
+        while True:
+            await self._poll()
+            await asyncio.sleep(10)
+
+    async def _poll(self):
         for cluster in self.clusters.values():
-            await cluster.poll()
+            await cluster._poll_all()
 
     async def forward(self, cluster_name: str, lambda_name: str, req: web.Request, target_url: str):
         cluster = self.clusters.get(cluster_name)
