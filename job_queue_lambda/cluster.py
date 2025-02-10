@@ -54,7 +54,7 @@ class Cluster:
         # update job state
         new_jobs = []
         for job in self._state[name]["jobs"]:
-            job_id = job["job_id"]
+            job_id = job["id"]
             job_info = await self.job_queue.get_job_info(job_id)
             if job_info is not None:
                 new_jobs.append(job)

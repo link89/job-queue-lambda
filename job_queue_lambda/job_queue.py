@@ -47,7 +47,11 @@ class Slurm(JobQueue):
             return {'id': job_id, 'nodes': []}
         # query nodes
         nodes = []
-        job = parse_csv(result.stdout, delimiter="|")[0]
+        jobs = parse_csv(result.stdout, delimiter="|")
+        if not jobs:
+            logger.error(f"No job found for id: {job_id}")
+            return None
+        job = jobs[0]
         state = job.get('ST', '').strip()
         if state == 'R':
             nodelist = job.get('NODELIST', '').strip()

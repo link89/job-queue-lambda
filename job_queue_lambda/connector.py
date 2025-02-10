@@ -75,7 +75,7 @@ class SshConnector(Connector):
         return self._connect
 
     def get_socks_proxy(self):
-        return f"socks5h://127.0.0.1:{self.config.socks_port}"
+        return f"socks5://127.0.0.1:{self.config.socks_port}"
 
     async def run(self, cmd: str):
         conn = await self.connect()
