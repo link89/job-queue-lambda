@@ -1,5 +1,10 @@
 # job-queue-lambda
 
+
+[![PyPI version](https://badge.fury.io/py/job-queue-lambda.svg)](https://badge.fury.io/py/job-queue-lambda)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/job-queue-lambda)](https://pypi.org/project/job-queue-lambda/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/job-queue-lambda)](https://pypi.org/project/job-queue-lambda/)
+
 Use job queue (Slurm, PBS, etc) as a remote function executor, just like AWS Lambda.
 
 ## Installation
