@@ -7,7 +7,7 @@ clusters:
     lambdas:
       - name: echo
         forward_to: http://{NODE_NAME}:8080/
-        cwd: ./tmp-jql
+        cwd: ./jql-demo
         script: |
           #!/bin/bash
           #SBATCH -N 1
