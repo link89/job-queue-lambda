@@ -13,8 +13,8 @@ class SshConfig(BaseModel):
 class LambdaConfig(BaseModel):
     name: str
     forward_to: str
-    script_path: str
-    script: Optional[str] = None
+    script: str
+    cwd: str
 
 
 class SlurmConfig(BaseModel):
@@ -33,7 +33,6 @@ class ClusterConfig(BaseModel):
     lambdas: List[LambdaConfig]
     ssh: Optional[SshConfig] = None
     job_queue: JobQueueConfig
-    tmp_dir: str = "./tmp-jql"
 
 
 class Config(BaseModel):

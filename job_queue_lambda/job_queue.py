@@ -1,5 +1,6 @@
 from typing import Optional
 from logging import getLogger
+import hashlib
 import csv
 import re
 
@@ -9,7 +10,7 @@ from .connector import Connector
 logger = getLogger(__name__)
 
 class JobQueue:
-    async def new_job(self, script_path: str, script: Optional[str]=None) -> str:
+    async def new_job(self, name: str, script: str, cwd: str) -> str:
         raise NotImplementedError()
 
     async def get_job_info(self, job_id: str) -> Optional[dict]:
@@ -22,12 +23,14 @@ class Slurm(JobQueue):
         self.config = config
         self.connector = connector
 
-    async def new_job(self, script_path: str, script: Optional[str]=None) -> str:
-        if script is not None:
-            logger.info(f"Creating script file: {script_path}")
-            await self.connector.dump_text(script, script_path)
-        # TODO: handle cwd properly or else the log file of slurm job will be a mess
-        cmd = f"{self.config.sbatch} {script_path}"
+    async def new_job(self, name: str, script: str, cwd: str) -> str:
+        await self.connector.run(f'mkdir -p {cwd}')
+        md5_hash = hashlib.md5(script.encode()).hexdigest()
+        script_name = f'{name}-{md5_hash}.sh'
+        script_path = f'{cwd}/{script_name}'
+        await self.connector.dump_text(script, script_path)
+        cmd = f"cd {cwd} && {self.config.sbatch} {script_name}"
+
         result = await self.connector.run(cmd)
         if result.return_code != 0:
             raise ValueError(f"Failed to submit job: {result.stderr}")

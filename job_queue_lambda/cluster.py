@@ -30,8 +30,7 @@ class Cluster:
             self.connector: Connector = LocalConnector()
 
         if config.job_queue.slurm:
-            self.job_queue: JobQueue = Slurm(
-                config.job_queue.slurm, self.connector)
+            self.job_queue: JobQueue = Slurm(config.job_queue.slurm, self.connector)
         else:
             raise ValueError("Unsupported job queue")
 
@@ -65,7 +64,7 @@ class Cluster:
         if not jobs:
             # no job is running, submit a new one
             # TODO: support max_jobs option in the future
-            job_id = await self.job_queue.new_job(lambda_config.script_path, lambda_config.script)
+            job_id = await self.job_queue.new_job(name, lambda_config.script, lambda_config.cwd)
             job_info = await self.job_queue.get_job_info(job_id)
             if job_info is not None:
                 jobs.append(job_info)
