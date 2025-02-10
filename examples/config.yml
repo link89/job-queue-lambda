@@ -5,13 +5,13 @@ clusters:
       socks_port: 10801
 
     lambdas:
-      - name: echo
+      - name: python-http
         forward_to: http://{NODE_NAME}:8080/
-        cwd: ./jql-demo
+        cwd: ./jq-lambda-demo
         script: |
           #!/bin/bash
           #SBATCH -N 1
-          #SBATCH --job-name=echo
+          #SBATCH --job-name=python-http
           #SBATCH --partition=cpu
           set -e
           timeout 30 python3 -m http.server 8080

@@ -1,46 +1,52 @@
 # job-queue-lambda
-Use job queue (Slurm, PBS, etc) as a remote function executor.
 
-## Introduction
-
-`job-queue-lambda` allows you to forward a HTTP request to a service that running on a remote job queue (Slurm, PBS, etc).
-For example, 
-
-```yaml
-# job-queue-lambda.yaml
-listen: "127.0.0.1:9000"
-
-clusters:
-  - name: ikkem-hpc 
-    ssh:
-      cmd: "ssh ikkem-hpc"
-      socks_listen: "127.0.0.1:9001"
-
-    job_queue:
-      slurm: {}
-    
-    lambdas:
-      - name: ollama
-        forward_to: "http://{NODE_NAME}:11434"
-        script_path: "./tmp/ollama.slurm"
-        script: |
-          #SBATCH --job-name=ollama
-          #SBATCH --partition=gpu
-
-          module load anaconda/3
-          source activate ollama
-          # running ollama server
-          ollama serve --model llama3.1 --port 11434
-```
-
-And then you will be able to forward a HTTP request to the ollama server running on the remote job queue.
-
-```bash
-curl -X POST http://127.0.0.1:9000/clusters/ikkem-hpc/lambda/ollama/chat -d '{"prompt": "Hello, world!"}'
-```
+Use job queue (Slurm, PBS, etc) as a remote function executor, just like AWS Lambda.
 
 ## Installation
 
 ```bash
 pip install job-queue-lambda
 ```
+## Getting Started
+
+`job-queue-lambda` allows you to forward a HTTP request to a service that running on a remote job queue. Currently only Slurm is supported.
+
+For example, you can use the following configuration:
+
+```yaml
+# ./examples/config.yaml
+clusters:
+  - name: ikkem-hpc
+    ssh:
+      host: ikkem-hpc
+      socks_port: 10801
+
+    lambdas:
+      - name: python-http
+        forward_to: http://{NODE_NAME}:8080/
+        cwd: ./jq-lambda-demo
+        script: |
+          #!/bin/bash
+          #SBATCH -N 1
+          #SBATCH --job-name=python-http
+          #SBATCH --partition=cpu
+          set -e
+          timeout 30 python3 -m http.server 8080
+
+    job_queue:
+      slurm: {}
+```
+
+And then you can start the server by running:
+```bash
+jq-lambda ./examples/config.yaml
+```
+
+Now you can use browser to access the following URL:  http://localhost:9000/clusters/ikkem-hpc/lambdas/python-http
+
+or using `curl`:
+```bash
+curl http://localhost:9000/clusters/ikkem-hpc/lambdas/python-http
+```
+
+The request will be forwarded to the remote job queue, and the response will be returned to you.
