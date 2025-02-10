@@ -21,4 +21,10 @@ def start(config_file: str):
 
 def main():
     import fire
+    import logging
+    import os
+
+    level_name = os.environ.get('LOG_LEVEL', 'INFO')
+    level = logging._nameToLevel.get(level_name, logging.INFO)
+    logging.basicConfig(format='%(asctime)s %(name)s: %(message)s', level=level)
     fire.Fire(start)

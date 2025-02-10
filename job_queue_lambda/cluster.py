@@ -20,8 +20,8 @@ class Cluster:
         if state is None:
             state = {}
         self._state = state
-
         self._proxy_connector: Optional[ProxyConnector] = None
+        self._session: Optional[aiohttp.ClientSession] = None
 
         self.config = config
         if config.ssh:
@@ -70,13 +70,18 @@ class Cluster:
                 logger.error(f"Failed to submit job: {job_id}")
         self._state[name]["jobs"] = new_jobs
 
-    def get_socks_proxy(self):
+    def _get_socks_proxy(self):
+        socks_url = self.connector.get_socks_proxy()
+        if socks_url is None:
+            return None
         if self._proxy_connector is None:
-            socks_url = self.connector.get_socks_proxy()
-            if socks_url is None:
-                return None
             self._proxy_connector = ProxyConnector.from_url(socks_url)
         return self._proxy_connector
+
+    async def _get_session(self):
+        if self._session is None:
+            self._session = aiohttp.ClientSession(connector=self._get_socks_proxy())
+        return self._session
 
     async def forward(self, lambda_name: str, req: web.Request, target_url: str):
         lambda_state  = self._state.get(lambda_name)
@@ -101,25 +106,24 @@ class Cluster:
         logger.info(f"Forwarding request to {forward_url}")
 
         # forward the request to the target server
-        # TODO: use connection pool for better performance
-        proxy_connector = self.get_socks_proxy()
         headers = dict(req.headers)
         headers.pop('Host', None)
-        async with aiohttp.ClientSession(connector=proxy_connector) as session:
-            async with session.request(
-                method=req.method,
-                url=forward_url,
-                headers=headers,
-                data=await req.read(),
-                allow_redirects=False,
-                timeout=aiohttp.ClientTimeout(total=60)
-            ) as response:
-                resp_body = await response.read()
-                return web.Response(
-                    body=resp_body,
-                    status=response.status,
-                    headers=response.headers
-                )
+
+        session = await self._get_session()
+        async with session.request(
+            method=req.method,
+            url=forward_url,
+            headers=headers,
+            data=await req.read(),
+            allow_redirects=False,
+            timeout=aiohttp.ClientTimeout(total=60)
+        ) as response:
+            resp_body = await response.read()
+            return web.Response(
+                body=resp_body,
+                status=response.status,
+                headers=response.headers
+            )
 
 class ClusterManager:
     def __init__(self, clusters : List[ClusterConfig]):
