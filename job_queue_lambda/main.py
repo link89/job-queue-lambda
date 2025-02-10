@@ -19,6 +19,7 @@ def start(config_file: str):
     app = make_http_server(cluster_manager, config.base_url)
     web.run_app(app, host=config.host, port=config.port, loop=loop)
 
+
 def main():
     import fire
     import logging
@@ -27,4 +28,6 @@ def main():
     level_name = os.environ.get('LOG_LEVEL', 'INFO')
     level = logging._nameToLevel.get(level_name, logging.INFO)
     logging.basicConfig(format='%(asctime)s %(name)s: %(message)s', level=level)
+    # config log level of asyncssh to warning
+    logging.getLogger('asyncssh').setLevel(logging.WARNING)
     fire.Fire(start)

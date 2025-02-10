@@ -41,9 +41,12 @@ class Cluster:
                 raise ValueError(f"Duplicate lambda name: {lambda_config.name}")
             self.lambdas[lambda_config.name] = lambda_config
 
-    async def _poll_all(self):
+    async def poll_all(self):
         for lambda_config in self.lambdas.values():
-            await self._poll_lambda(lambda_config)
+            try:
+                await self._poll_lambda(lambda_config)
+            except Exception as e:
+                logger.exception(f"Failed to poll lambda: {lambda_config.name}")
 
     async def _poll_lambda(self, lambda_config: LambdaConfig):
         name = lambda_config.name
@@ -52,23 +55,23 @@ class Cluster:
                 "jobs": [],
             }
         # update job state
-        new_jobs = []
+        jobs = []
         for job in self._state[name]["jobs"]:
             job_id = job["id"]
             job_info = await self.job_queue.get_job_info(job_id)
             if job_info is not None:
-                new_jobs.append(job)
+                jobs.append(job)
 
-        if not new_jobs:
+        if not jobs:
             # no job is running, submit a new one
             # TODO: support max_jobs option in the future
             job_id = await self.job_queue.new_job(lambda_config.script_path, lambda_config.script)
             job_info = await self.job_queue.get_job_info(job_id)
             if job_info is not None:
-                new_jobs.append(job_info)
+                jobs.append(job_info)
             else:
                 logger.error(f"Failed to submit job: {job_id}")
-        self._state[name]["jobs"] = new_jobs
+        self._state[name]["jobs"] = jobs
 
     def _get_socks_proxy(self):
         socks_url = self.connector.get_socks_proxy()
@@ -140,7 +143,10 @@ class ClusterManager:
 
     async def _poll(self):
         for cluster in self.clusters.values():
-            await cluster._poll_all()
+            try:
+                await cluster.poll_all()
+            except Exception as e:
+                logger.exception(f"Failed to poll cluster: {cluster.config.name}")
 
     async def forward(self, cluster_name: str, lambda_name: str, req: web.Request, target_url: str):
         cluster = self.clusters.get(cluster_name)

@@ -34,6 +34,7 @@ class Slurm(JobQueue):
         job_id = self._parse_job_id(result.stdout)
         if not job_id:
             raise ValueError(f"Failed to parse job id from: {result.stdout}, err: {result.stderr}")
+        logger.info(f'Job submitted: {job_id}')
         return job_id
 
     async def get_job_info(self, job_id: str):
@@ -58,6 +59,7 @@ class Slurm(JobQueue):
             result = await self.connector.run(f'{self.config.scontrol} show hostname {nodelist}')
             if result.return_code == 0:
                 nodes = result.stdout.strip().splitlines()
+                logger.info(f"Job {job_id} is running on nodes: {nodes}")
             else:
                 logger.error(f"Failed to parse nodelist: {result.stderr}")
         return { 'id': job_id, 'nodes': nodes, }
