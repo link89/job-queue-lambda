@@ -9,7 +9,9 @@ def make_http_server(cluster_manager: ClusterManager, base_url: str):
     async def handle_request(request: web.Request) -> web.Response:
         cluster_name = request.match_info['cluster_name']
         lambda_name  = request.match_info['lambda_name']
-        target_url = request.match_info.get('tail', '') + '?' + request.query_string
+        target_url = request.match_info.get('tail', '')
+        if request.query_string:
+            target_url = target_url + '?' + request.query_string
         try:
             return await cluster_manager.forward(cluster_name, lambda_name, request, target_url=target_url)
         except ValueError as e:
