@@ -59,7 +59,7 @@ class Cluster:
             job_id = job["id"]
             job_info = await self.job_queue.get_job_info(job_id)
             if job_info is not None:
-                jobs.append(job)
+                jobs.append(job_info)
 
         if not jobs:
             # no job is running, submit a new one
@@ -96,7 +96,7 @@ class Cluster:
         job = lambda_state["jobs"][0]
         nodes = job["nodes"]
         if not nodes:
-            raise ValueError(f"No node found for job: {job['id']}")
+            raise ValueError(f"No node found for job: {job}")
         # TODO: load balance by request count
         node = nodes[0]
 
